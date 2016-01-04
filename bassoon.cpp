@@ -1,11 +1,42 @@
 #include <string>
 #include <vector>
 #include <fstream>
+#include <chrono>
+#include <thread>
 #include <dchain/dchain.h>
 #include <nihdb/nihdb.h>
 #include <curses.h>
 
 #define DBFILE "/.password"
+
+std::string getnstring()
+{
+	char c;
+	std::string temp;
+
+	while (c != '\r'){
+		c = getch();
+		if (c == 127){
+			if (temp.length() != 0)
+				temp.pop_back();
+			continue;
+		}
+		if (c != '\r')
+			temp += c;
+	}
+	addch('\n');
+	refresh();
+
+	return temp;
+}
+
+void finish()
+{
+	echo();
+	nocbreak();
+	nl();
+	endwin();
+}
 
 int main()
 {
@@ -35,7 +66,7 @@ int main()
 				addstr("Cannot open password database for writing. Please make sure that you have write permissions in your home folder\n");
 				addstr("Press any key to exit...");
 				getch();
-				endwin();
+				finish();
 				return 1;
 			}
 			touch.close();
@@ -55,33 +86,49 @@ int main()
 			{
 				temp.clear();
 				passwd.clear();
-				c = '\0';
 				addstr("-->Enter new password: ");
-				while (c != '\r') {
-					c = getch();
-					if (c != '\r')
-						temp += c;
-				}
-				addch('\n');
-				c = '\0';
+				temp = getnstring();
 				addstr("-->Confirm password: ");
-				while (c != '\r') {
-					c = getch();
-					if (c != '\r')
-						passwd += c;
-				}
-				addch('\n');
-
+				passwd = getnstring();
 				btemp = (temp == passwd);
 				if (!btemp)
 					addstr("Passwords do not match.\n");
 			}
+			tempDB.ChangeVarValue("meta", "passwd", dchain::strEncrypt(passwd, passwd));
 
 			tempDB.ApplyChanges();
-			addstr("Database successfully created. Please log in to continue.\n");
-		} else
+			addstr("Database successfully created. Please log in to continue.\n\n");
+		} else {
+			finish();
 			return 1;
+		}
 	}
-	endwin();
+
+	temp = std::getenv("HOME");
+	temp += DBFILE;
+	nihdb::dataBase datb(temp);
+	std::string passwd;
+	bool btemp = false;
+	int count = 1;
+
+	while (!btemp)
+	{
+		addstr("-->Enter password: ");
+		passwd = getnstring();
+		btemp = (passwd == dchain::strDecrypt(datb.ReturnVar("meta", "passwd"), passwd));
+
+		if (!btemp){
+			std::this_thread::sleep_for(std::chrono::seconds(3));
+			if (count == 3) {
+				addstr("Too many incorrect password attempts... Aborting, press a key to continue\n");
+				getch();
+				finish();
+				return 1;
+			}
+			addstr("Incorrect password, please try again\n");
+			count++;
+		}
+	}
+	finish();
 	return 0;
 }
