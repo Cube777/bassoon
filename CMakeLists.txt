@@ -12,11 +12,8 @@ set(CMAKE_DEBUG_POSTFIX "d")
 #Add C++11 support
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 
-#Add include paths
-include_directories(${CMAKE_SOURCE_DIR}/include)
-
 #Add library modules
-add_executable(bassoon "src/bassoon.cpp")
+add_executable(bassoon "${CMAKE_SOURCE_DIR}/bassoon.cpp")
 
 #Import libraries
 add_library(dchain SHARED IMPORTED)
