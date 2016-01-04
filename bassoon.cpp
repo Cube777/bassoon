@@ -6,6 +6,7 @@
 #include <fstream>
 #include <thread>
 #include <chrono>
+#include <regex>
 
 #define DBFILE "/.password"
 
@@ -22,10 +23,66 @@ void modStty(bool echo, bool raw)
 		system("/usr/bin/stty -raw");
 }
 
+std::string tabComplete(std::string command, std::vector<std::string> items)
+{
+	return "";
+}
+
 int startCLI(nihdb::dataBase* datb, std::string password)
 {
-	modStty(true, true);
-	std::cout << "bassoon command line interface initialized.\n\n\rType \"help\" to get a list of commands.\n\n";
+	modStty(false, true);
+	std::cout << "bassoon command line interface initialized.\n\n\rType \"help\" to get a list of commands.\n\n\r";
+
+	std::string command;
+	std::vector<std::string> items;
+	bool bexit = false;
+
+	while (!bexit)
+	{
+		command.clear();
+		char c = '\0';
+		std::cout << "\r> ";
+
+		while (c != '\r')
+		{
+			c = std::cin.get();
+
+			if (c == '\r')
+				continue;
+
+			if (c == '\t') {
+				command = tabComplete(command, items);
+				std::cout << "\33[2K\r> " << command;
+				continue;
+			}
+
+			if (c == 127) {
+				if (command.length() != 0)
+					command.pop_back();
+				std::cout << "\33[2K\r> " << command;
+				continue;
+			}
+
+			command += c;
+			putchar(c);
+		}
+
+		if (command.empty()) {
+			putchar('\n');
+			continue;
+		}
+
+		if (command == "exit") {
+			bexit = true;
+			continue;
+		}
+
+		if (std::regex_match(command, std::regex("(show)(.*)"))) {
+			continue;
+		}
+
+		std::cout << "\n\rCommand \"" << command << "\" not found\n";
+	}
 
 	return 0;
 }
@@ -116,5 +173,8 @@ int main()
 	}
 
 	std::cout << "Initializing command line interface...\n";
-	return startCLI(datb, password);
+	int status =  startCLI(datb, password);
+	modStty(true, false);
+	putchar('\n');
+	return status;
 }
