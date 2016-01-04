@@ -18,13 +18,11 @@ add_executable(bassoon "${CMAKE_SOURCE_DIR}/bassoon.cpp")
 #Import libraries
 add_library(dchain SHARED IMPORTED)
 add_library(nihdb SHARED IMPORTED)
-add_library(curses SHARED IMPORTED)
 
 set_target_properties(dchain PROPERTIES IMPORTED_LOCATION "/usr/lib/libdchain.so")
 set_target_properties(nihdb PROPERTIES IMPORTED_LOCATION "/usr/lib/libnihdb.so")
-set_target_properties(curses PROPERTIES IMPORTED_LOCATION "/usr/lib/libcurses.so")
 
-target_link_libraries(bassoon dchain nihdb curses)
+target_link_libraries(bassoon dchain nihdb ncurses)
 
 #Installation
 set(INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/bin")
