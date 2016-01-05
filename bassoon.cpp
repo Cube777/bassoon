@@ -322,7 +322,7 @@ void modItem(std::string item, std::string password, nihdb::dataBase* datb)
 
 int startCLI(nihdb::dataBase* datb, std::string password)
 {
-	std::cout << "bassoon command line interface initialized.\n\nType \"help\" to get a list of commands.\n\n";
+	std::cout << "bassoon command line interface initialized.\n\nType \"help\" to get a list of commands.\nCAUTION! All passwords will now be plaintext!\n\n";
 
 	std::string temp, command;
 	temp = datb->ReturnVar("meta", "items");
@@ -437,7 +437,10 @@ int startCLI(nihdb::dataBase* datb, std::string password)
 		}
 
 		if (command == "list") {
-			std::cout << "\n\r" << items[i] << "\n\r";
+			if (items.empty()) {
+				std::cout << "\n\r";
+				continue;
+			}
 			for (int i = 0; i < items.size(); i++) {
 				std::cout << "\n\r" << items[i] << "\n\r";
 			}
