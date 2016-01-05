@@ -44,7 +44,9 @@ std::string tabComplete(std::string command, std::vector<std::string> items)
 		cmd("modify", true),
 		cmd("remove", true),
 		cmd("new", false),
-		cmd("clear", false)
+		cmd("clear", false),
+		cmd("list", false),
+		cmd("xclip", false)
 	};
 
 	bool arg = false;
@@ -149,6 +151,8 @@ void printHelp()
 		<< "remove (item)   Remove item\n"
 		<< "new             Create a new item\n"
 		<< "clear           Clear screen\n"
+		<< "list            List all items in database\n"
+		<< "xclip           Toggle automatic copying of passord to clipboard on command show\n"
 
 		<< '\n';
 	modStty(false,true);
@@ -429,6 +433,24 @@ int startCLI(nihdb::dataBase* datb, std::string password)
 				command.erase(0, 1);
 			}
 			modItem(command, password, datb);
+			continue;
+		}
+
+		if (command == "list") {
+			for (int i = 0; i < items.size(); i++) {
+				std::cout << "\n\r" << items[i] << "\n\r";
+			}
+			continue;
+		}
+
+		if (command == "xclip") {
+			if (datb->ReturnVar("meta", "xclip") == "true")
+				datb->ChangeVarValue("meta", "xclip", "false");
+			else
+				datb->ChangeVarValue("meta", "xclip", "true");
+
+			std::cout << "\r\nAutomatic copying of password to clipboard now set to [" << datb->ReturnVar("meta", "xclip") << "]\n\r";
+			datb->ApplyChanges();
 			continue;
 		}
 
