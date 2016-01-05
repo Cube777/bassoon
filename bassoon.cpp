@@ -32,6 +32,41 @@ void modStty(bool echo, bool raw)
 		system("/usr/bin/stty -raw");
 }
 
+std::string changePassword(nihdb::dataBase* datb, std::string oldpwd, std::vector<std::string> items)
+{
+	modStty(false, false);
+	std::cout << "\nPasswords will be invisible\n";
+	std::string temp1, temp2;
+
+	bool btemp = false;
+	while (!btemp) {
+		std::cout << "-->Enter new password: ";
+		std::getline(std::cin, temp1);
+		putchar('\n');
+		std::cout << "-->Confirm password: ";
+		std::getline(std::cin, temp2);
+		putchar('\n');
+
+		btemp = (temp1 == temp2);
+
+		if (temp1.empty()) {
+			std::cout << "Password field cannot be empty.\n\n";
+			btemp = false;
+			continue;
+		}
+
+		if (!btemp)
+			std::cout << "Passwords do not match.\n\n";
+	}
+	datb->ChangeVarValue("meta", "passwd", dchain::strEncrypt(temp1, temp1));
+
+	for (int i = 0; i < items.size(); i++)
+		datb->ChangeVarValue(items[i], "passwd", dchain::strEncrypt(dchain::strDecrypt(datb->ReturnVar(items[i], "passwd"), oldpwd), temp1));
+	datb->ApplyChanges();
+
+	return temp1;
+}
+
 std::string tabComplete(std::string command, std::vector<std::string> items)
 {
 	if (command.empty())
@@ -46,7 +81,8 @@ std::string tabComplete(std::string command, std::vector<std::string> items)
 		cmd("new", false),
 		cmd("clear", false),
 		cmd("list", false),
-		cmd("xclip", false)
+		cmd("xclip", false),
+		cmd("passwd", false)
 	};
 
 	bool arg = false;
@@ -153,6 +189,7 @@ void printHelp()
 		<< "clear           Clear screen\n"
 		<< "list            List all items in database\n"
 		<< "xclip           Toggle automatic copying of passord to clipboard on command show\n"
+		<< "passwd          Change password for database\n"
 
 		<< '\n';
 	modStty(false,true);
@@ -212,7 +249,7 @@ outer:
 		}
 		btemp = true;
 	}
-	datb->CreateVar(items, "username", dchain::strEncrypt(temp, passwd));
+	datb->CreateVar(items, "username", temp);
 
 	btemp = false;
 	while (!btemp) {
@@ -234,9 +271,9 @@ outer:
 void showItem(std::string item, std::string passwd, nihdb::dataBase* datb)
 {
 	modStty(true, false);
-	std::string temp = dchain::strDecrypt(datb->ReturnVar(item, "username"), passwd);
+	std::string temp = datb->ReturnVar(item, "username");
 	if (temp.empty()) {
-		std::cout << "\nItem \"" << item << "\" not found\n";
+		std::cout << "\nItem \"" << item << "\" not found.\n";
 		return;
 	}
 
@@ -255,6 +292,18 @@ void showItem(std::string item, std::string passwd, nihdb::dataBase* datb)
 std::vector<std::string> removeItem(std::string item, std::vector<std::string> items, nihdb::dataBase* datb)
 {
 	modStty(false, true);
+	bool btemp = false;
+	for (int i = 0; i < items.size(); i++) {
+		if (item == items[i]) {
+			btemp = true;
+			break;
+		}
+	}
+
+	if (!btemp) {
+		std::cout << "\n\rItem \"" << item << "\" not found.\n";
+		return items;
+	}
 	std::cout << "\n\rAre you sure you want to delete \"" << item << "\"? [N/y]: ";
 	char c = std::cin.get();
 	if ( c != '\r')
@@ -265,10 +314,7 @@ std::vector<std::string> removeItem(std::string item, std::vector<std::string> i
 		return items;
 	}
 
-	if (!datb->DeleteSection(item)) {
-		std::cout << "Item \"" << item << "\" not found!\n";
-		return items;
-	}
+	datb->DeleteSection(item);
 	std::cout << "Item \"" << item << "\" has been removed from the database\n";
 
 	for (std::vector<std::string>::iterator itr = items.begin(); itr != items.end(); itr++) {
@@ -292,10 +338,10 @@ std::vector<std::string> removeItem(std::string item, std::vector<std::string> i
 void modItem(std::string item, std::string password, nihdb::dataBase* datb)
 {
 	modStty(true, false);
-	std::string temp = dchain::strDecrypt(datb->ReturnVar(item, "username"), password);
+	std::string temp = datb->ReturnVar(item, "username");
 
 	if (temp.empty()) {
-		std::cout << "\nItem \"" << item << "not found.\n";
+		std::cout << "\nItem \"" << item << "\" not found.\n";
 		return;
 	}
 	std::cout << "\n\nLeaving the field empty will leave the field unmodified.\n\n";
@@ -305,8 +351,7 @@ void modItem(std::string item, std::string password, nihdb::dataBase* datb)
 	std::getline(std::cin, input);
 
 	if (!input.empty())
-		datb->ChangeVarValue(item, "username", dchain::strEncrypt(input, password));
-
+		datb->ChangeVarValue(item, "username", input);
 
 	temp = dchain::strDecrypt(datb->ReturnVar(item, "passwd"), password);
 	std::cout << "Password (" << temp << "): ";
@@ -401,7 +446,7 @@ int startCLI(nihdb::dataBase* datb, std::string password)
 		}
 
 		if (std::regex_match(command, std::regex("(show)(.*)"))) {
-			while (true) {
+			while (true && (command.length() != 0)) {
 				if (command[0] == ' ') {
 					command.erase(0, 1);
 					break;
@@ -413,7 +458,7 @@ int startCLI(nihdb::dataBase* datb, std::string password)
 		}
 
 		if (std::regex_match(command, std::regex("(remove)(.*)"))) {
-			while (true) {
+			while (true && (command.length() != 0)) {
 				if (command[0] == ' ') {
 					command.erase(0, 1);
 					break;
@@ -425,7 +470,7 @@ int startCLI(nihdb::dataBase* datb, std::string password)
 		}
 
 		if (std::regex_match(command, std::regex("(modify)(.*)"))) {
-			while (true) {
+			while (true && (command.length() != 0)) {
 				if (command[0] == ' ') {
 					command.erase(0, 1);
 					break;
@@ -459,6 +504,12 @@ int startCLI(nihdb::dataBase* datb, std::string password)
 			continue;
 		}
 
+		if (command == "passwd") {
+			password = changePassword(datb, password, items);
+			std::cout << "\n\rPassword changed successfully\n\r";
+			continue;
+		}
+
 		std::cout << "\n\rCommand \"" << command << "\" not found\n";
 	}
 
@@ -486,24 +537,6 @@ int main()
 
 		if ( (c == '\r') || (c == 'y') || (c == 'Y') )
 		{
-			modStty(false, false);
-			std::cout << "\nPasswords will be invisible\n";
-
-			bool btemp = false;
-			while (!btemp) {
-				std::cout << "-->Enter new password: ";
-				std::getline(std::cin, temp);
-				putchar('\n');
-				std::cout << "-->Confirm password: ";
-				std::getline(std::cin, password);
-				putchar('\n');
-
-				btemp = (temp == password);
-
-				if (!btemp)
-					std::cout << "Passwords do not match!\n\n";
-			}
-
 			std::ofstream touch(filepath.c_str());
 			touch.close();
 			nihdb::dataBase tempdb(filepath);
@@ -511,11 +544,11 @@ int main()
 			tempdb.AddComment("All sensitive data is encrypted with dchain encryption library");
 			tempdb.AddComment("Please do not modify this file manually as this could corrupt the database");
 			tempdb.CreateSection("meta");
-			tempdb.CreateVar("meta", "passwd", dchain::strEncrypt(password, password));
+			tempdb.CreateVar("meta", "passwd");
 			tempdb.CreateVar("meta", "items");
 			tempdb.CreateVar("meta", "xclip", "false");
+			changePassword(&tempdb, "", std::vector<std::string>());
 
-			tempdb.ApplyChanges();
 			std::cout << "Database created successfully! Please log in to continue...\n\n";
 		}
 		else{
