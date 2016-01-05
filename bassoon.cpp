@@ -10,6 +10,15 @@
 
 #define DBFILE "/.password"
 
+struct cmd {
+	cmd(std::string nm, bool use){
+		name = nm;
+		items = use;
+	}
+	std::string name;
+	bool items;
+};
+
 void modStty(bool echo, bool raw)
 {
 	if (echo)
@@ -25,7 +34,87 @@ void modStty(bool echo, bool raw)
 
 std::string tabComplete(std::string command, std::vector<std::string> items)
 {
-	return "";
+	if (command.empty())
+		return "";
+
+	cmd cmds[] = {
+		cmd("help", false),
+		cmd("exit", false),
+		cmd("show", true),
+		cmd("modify", true),
+		cmd("remove", true),
+		cmd("new", false),
+		cmd("clear", false)
+	};
+
+	bool arg = false;
+	int pos = 0;
+
+	for (; pos < command.length(); pos++) {
+		if (command[pos] == ' ') {
+			arg = true;
+			break;
+		}
+	}
+
+	std::string temp;
+	std::vector<std::string> cand;
+	if (!arg) {
+		temp = "(";
+		temp += command;
+		temp += ")(.*)";
+		std::regex rgx(temp);
+		for (int i = 0; i < sizeof(cmds)/sizeof(*cmds); i++) {
+			if (std::regex_match(cmds[i].name, rgx))
+				cand.push_back(cmds[i].name);
+		}
+	}
+	else
+	{
+		temp = "(";
+		temp += command.substr(pos + 1, command.length() - pos);
+		temp += ")(.*)";
+		std::regex rgx(temp);
+
+		for (int i = 0; i < items.size(); i++) {
+			if (std::regex_match(items[i], rgx))
+				cand.push_back(items[i]);
+		}
+	}
+	if (cand.size() == 0)
+		return command;
+
+	if (cand.size() == 1)
+	{
+		if (arg)
+			return command.substr(0, pos + 1) + cand[0];
+		else
+			return cand[0];
+	}
+
+	std::cout << "\r> " << command.substr(0, pos + 1) << "{ ";
+	for (int i = 0; i < cand.size(); i++)
+		std::cout << cand[i] << "; ";
+	std::cout << "}\n\n";
+
+	return command;
+
+}
+
+void printHelp()
+{
+	modStty(true,false);
+
+	std::cout << "\n\nUsage: command (argument/item)\n\n"
+		<< "exit            Close bassoon\n"
+		<< "show (item)     Show item details\n"
+		<< "modify (item)   Modify item\n"
+		<< "remove (item)   Remove item\n"
+		<< "new             Create a new item\n"
+		<< "clear           Clear screen\n"
+
+		<< '\n';
+	modStty(false,true);
 }
 
 int startCLI(nihdb::dataBase* datb, std::string password)
@@ -33,8 +122,18 @@ int startCLI(nihdb::dataBase* datb, std::string password)
 	modStty(false, true);
 	std::cout << "bassoon command line interface initialized.\n\n\rType \"help\" to get a list of commands.\n\n\r";
 
-	std::string command;
+	std::string temp, command;
+	temp = datb->ReturnVar("meta", "items");
 	std::vector<std::string> items;
+	for (int i = 0; i < temp.length(); i++){
+		if (temp[i] == ' ') {
+			items.push_back(command);
+			command.clear();
+			continue;
+		}
+		command += temp[i];
+	}
+	items.push_back(command);
 	bool bexit = false;
 
 	while (!bexit)
@@ -74,6 +173,16 @@ int startCLI(nihdb::dataBase* datb, std::string password)
 
 		if (command == "exit") {
 			bexit = true;
+			continue;
+		}
+
+		if (command == "help") {
+			printHelp();
+			continue;
+		}
+
+		if (command == "clear") {
+			system("clear");
 			continue;
 		}
 
