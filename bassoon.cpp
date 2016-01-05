@@ -227,6 +227,27 @@ outer:
 	return items;
 }
 
+void showItem(std::string item, std::string passwd, nihdb::dataBase* datb)
+{
+	modStty(true, false);
+	std::string temp = dchain::strDecrypt(datb->ReturnVar(item, "username"), passwd);
+	if (temp.empty()) {
+		std::cout << "\nItem \"" << item << "\" not found\n";
+		return;
+	}
+
+	std::cout << "\nUsername: " << temp << '\n';
+	temp = dchain::strDecrypt(datb->ReturnVar(temp, "passwd"), passwd);
+	std::cout << "Password: " << temp << '\n';
+	if (datb->ReturnVar("meta", "xclip") == "true") {
+		temp.insert(0, "printf \"");
+		temp += "\" | xclip -selection clipboard";
+		system(temp.c_str());
+		std::cout << "Password copied to clipboard\n";
+	}
+
+}
+
 int startCLI(nihdb::dataBase* datb, std::string password)
 {
 	std::cout << "bassoon command line interface initialized.\n\nType \"help\" to get a list of commands.\n\n";
@@ -304,6 +325,14 @@ int startCLI(nihdb::dataBase* datb, std::string password)
 		}
 
 		if (std::regex_match(command, std::regex("(show)(.*)"))) {
+			while (true) {
+				if (command[0] == ' ') {
+					command.erase(0, 1);
+					break;
+				}
+				command.erase(0, 1);
+			}
+			showItem(command, password, datb);
 			continue;
 		}
 
