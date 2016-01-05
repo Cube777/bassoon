@@ -8,7 +8,7 @@
 #include <chrono>
 #include <regex>
 
-#define DBFILE "/.password"
+#define DBFILE "/.passwords"
 
 struct cmd {
 	cmd(std::string nm, bool use){
@@ -237,7 +237,7 @@ void showItem(std::string item, std::string passwd, nihdb::dataBase* datb)
 	}
 
 	std::cout << "\nUsername: " << temp << '\n';
-	temp = dchain::strDecrypt(datb->ReturnVar(temp, "passwd"), passwd);
+	temp = dchain::strDecrypt(datb->ReturnVar(item, "passwd"), passwd);
 	std::cout << "Password: " << temp << '\n';
 	if (datb->ReturnVar("meta", "xclip") == "true") {
 		temp.insert(0, "printf \"");
@@ -246,6 +246,43 @@ void showItem(std::string item, std::string passwd, nihdb::dataBase* datb)
 		std::cout << "Password copied to clipboard\n";
 	}
 
+}
+
+std::vector<std::string> removeItem(std::string item, std::vector<std::string> items, nihdb::dataBase* datb)
+{
+	modStty(false, true);
+	std::cout << "\n\rAre you sure you want to delete \"" << item << "\"? [N/y]: ";
+	char c = std::cin.get();
+	if ( c != '\r')
+		putchar(c);
+	std::cout << "\n\r";
+
+	if ( ( c == '\r') || (c == 'n') || (c == 'Y') ) {
+		return items;
+	}
+
+	if (!datb->DeleteSection(item)) {
+		std::cout << "Item \"" << item << "\" not found!\n";
+		return items;
+	}
+	std::cout << "Item \"" << item << "\" has been removed from the database\n";
+
+	for (std::vector<std::string>::iterator itr = items.begin(); itr != items.end(); itr++) {
+		if (*itr == item) {
+			items.erase(itr);
+			break;
+		}
+	}
+	std::string temp;
+	for (int i = 0; i < items.size(); i++)
+		temp += items[i];
+
+	if (temp.empty())
+		temp = "empty";
+
+	datb->ChangeVarValue("meta", "items", temp);
+	datb->ApplyChanges();
+	return items;
 }
 
 int startCLI(nihdb::dataBase* datb, std::string password)
@@ -265,7 +302,8 @@ int startCLI(nihdb::dataBase* datb, std::string password)
 		}
 		command += temp[i];
 	}
-	items.push_back(command);
+	if (!temp.empty())
+		items.push_back(command);
 	bool bexit = false;
 
 	while (!bexit)
@@ -333,6 +371,18 @@ int startCLI(nihdb::dataBase* datb, std::string password)
 				command.erase(0, 1);
 			}
 			showItem(command, password, datb);
+			continue;
+		}
+
+		if (std::regex_match(command, std::regex("(remove)(.*)"))) {
+			while (true) {
+				if (command[0] == ' ') {
+					command.erase(0, 1);
+					break;
+				}
+				command.erase(0, 1);
+			}
+			items = removeItem(command, items, datb);
 			continue;
 		}
 
