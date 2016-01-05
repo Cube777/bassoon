@@ -285,6 +285,37 @@ std::vector<std::string> removeItem(std::string item, std::vector<std::string> i
 	return items;
 }
 
+void modItem(std::string item, std::string password, nihdb::dataBase* datb)
+{
+	modStty(true, false);
+	std::string temp = dchain::strDecrypt(datb->ReturnVar(item, "username"), password);
+
+	if (temp.empty()) {
+		std::cout << "\nItem \"" << item << "not found.\n";
+		return;
+	}
+	std::cout << "\n\nLeaving the field empty will leave the field unmodified.\n\n";
+	std::string input;
+
+	std::cout << "Username (" << temp << "): ";
+	std::getline(std::cin, input);
+
+	if (!input.empty())
+		datb->ChangeVarValue(item, "username", dchain::strEncrypt(input, password));
+
+
+	temp = dchain::strDecrypt(datb->ReturnVar(item, "passwd"), password);
+	std::cout << "Password (" << temp << "): ";
+	std::getline(std::cin, input);
+
+	if (!input.empty())
+		datb->ChangeVarValue(item, "passwd", dchain::strEncrypt(input, password));
+
+	datb->ApplyChanges();
+	std::cout << "Item changes saved...\n";
+	return;
+}
+
 int startCLI(nihdb::dataBase* datb, std::string password)
 {
 	std::cout << "bassoon command line interface initialized.\n\nType \"help\" to get a list of commands.\n\n";
@@ -316,6 +347,9 @@ int startCLI(nihdb::dataBase* datb, std::string password)
 		while (c != '\r')
 		{
 			c = std::cin.get();
+
+			if (c == 27)
+				continue;
 
 			if (c == '\r')
 				continue;
@@ -383,6 +417,18 @@ int startCLI(nihdb::dataBase* datb, std::string password)
 				command.erase(0, 1);
 			}
 			items = removeItem(command, items, datb);
+			continue;
+		}
+
+		if (std::regex_match(command, std::regex("(modify)(.*)"))) {
+			while (true) {
+				if (command[0] == ' ') {
+					command.erase(0, 1);
+					break;
+				}
+				command.erase(0, 1);
+			}
+			modItem(command, password, datb);
 			continue;
 		}
 
