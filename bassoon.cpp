@@ -154,13 +154,87 @@ void printHelp()
 	modStty(false,true);
 }
 
+std::string newItem(nihdb::dataBase* datb, std::string passwd)
+{
+	modStty(true, false);
+	bool btemp = false;
+	std::string temp, items;
+
+	while (!btemp) {
+outer:
+		std::cout << "\nEnter item name: ";
+		temp.clear();
+		std::getline(std::cin, temp);
+
+		if (temp == "meta") {
+			std::cout << "Name \"meta\" cannot be used as it is used internally inside bassoon\n\n";
+			continue;
+		}
+
+		for (int i = 0; i < temp.size(); i++) {
+			if (temp[i] == ' ') {
+				std::cout << "Name cannot contain spaces\n\n";
+				goto outer;
+			}
+		}
+
+		btemp = datb->CreateSection(temp);
+
+		if (!btemp) {
+			std::cout << "Name \"" << temp << "\" is already in use, please use another\n";
+			continue;
+		}
+
+		items = datb->ReturnVar("meta", "items");
+		if (items == "empty") {
+			items.clear();
+			items = temp;
+		} else {
+			items += " ";
+			items += temp;
+		}
+
+		datb->ChangeVarValue("meta", "items", items);
+		items = temp;
+	}
+
+	btemp = false;
+	while (!btemp) {
+		std::cout << "Enter username for this item: ";
+		std::getline(std::cin, temp);
+		if (temp.empty()) {
+			std::cout << "Username field cannot be empty\n";
+			continue;
+		}
+		btemp = true;
+	}
+	datb->CreateVar(items, "username", dchain::strEncrypt(temp, passwd));
+
+	btemp = false;
+	while (!btemp) {
+		std::cout << "Enter password for this item: ";
+		std::getline(std::cin, temp);
+		if (temp.empty()) {
+			std::cout << "Password field cannot be empty\n";
+			continue;
+		}
+		btemp = true;
+	}
+	datb->CreateVar(items, "passwd", dchain::strEncrypt(temp, passwd));
+
+	datb->ApplyChanges();
+	std::cout << "Item \"" << items << "\" successfully created!\n\n";
+	return items;
+}
+
 int startCLI(nihdb::dataBase* datb, std::string password)
 {
-	modStty(false, true);
-	std::cout << "bassoon command line interface initialized.\n\n\rType \"help\" to get a list of commands.\n\n\r";
+	std::cout << "bassoon command line interface initialized.\n\nType \"help\" to get a list of commands.\n\n";
 
 	std::string temp, command;
 	temp = datb->ReturnVar("meta", "items");
+	if (temp == "empty")
+		temp.clear();
 	std::vector<std::string> items;
 	for (int i = 0; i < temp.length(); i++){
 		if (temp[i] == ' ') {
@@ -175,6 +249,7 @@ int startCLI(nihdb::dataBase* datb, std::string password)
 
 	while (!bexit)
 	{
+		modStty(false, true);
 		command.clear();
 		char c = '\0';
 		std::cout << "\r> ";
@@ -220,6 +295,11 @@ int startCLI(nihdb::dataBase* datb, std::string password)
 
 		if (command == "clear") {
 			system("clear");
+			continue;
+		}
+
+		if (command == "new") {
+			items.push_back(newItem(datb, password));
 			continue;
 		}
 
