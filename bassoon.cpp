@@ -97,8 +97,45 @@ std::string tabComplete(std::string command, std::vector<std::string> items)
 		std::cout << cand[i] << "; ";
 	std::cout << "}\n\n";
 
-	return command;
+	bool btemp = true;
+	temp.clear();
+	char c;
+	pos = 0;
 
+	while (true) {
+		if (pos >= cand[0].length())
+			break;
+		else
+			c = cand[0][pos];
+
+		for (int i = 0; i < cand.size(); i++) {
+			if (pos >= cand[i].length()) {
+				btemp = false;
+				break;
+			}
+			btemp = (c == cand[i][pos]) && btemp;
+			if (!btemp)
+				break;
+		}
+
+		if (!btemp)
+			break;
+
+		temp += c;
+		pos++;
+	}
+
+	if (!arg)
+		return temp;
+	else {
+		int i = 0;
+		while (true) {
+			if (command[i++] == ' ')
+				break;
+		}
+		temp.insert(0, command.substr(0, i));
+		return temp;
+	}
 }
 
 void printHelp()
