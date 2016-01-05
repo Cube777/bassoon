@@ -442,8 +442,9 @@ int startCLI(nihdb::dataBase* datb, std::string password)
 				continue;
 			}
 			for (int i = 0; i < items.size(); i++) {
-				std::cout << "\n\r" << items[i] << "\n\r";
+				std::cout << "\n\r" << items[i];
 			}
+			std::cout << "\n\r";
 			continue;
 		}
 
