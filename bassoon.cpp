@@ -7,6 +7,7 @@
 #include <thread>
 #include <chrono>
 #include <regex>
+#include <sstream>
 
 #define DBFILE "/.passwords"
 
@@ -82,7 +83,8 @@ std::string tabComplete(std::string command, std::vector<std::string> items)
 		cmd("clear", false),
 		cmd("list", false),
 		cmd("xclip", false),
-		cmd("passwd", false)
+		cmd("passwd", false),
+		cmd("generate", false)
 	};
 
 	bool arg = false;
@@ -190,6 +192,7 @@ void printHelp()
 		<< "list            List all items in database\n"
 		<< "xclip           Toggle automatic copying of passord to clipboard on command show\n"
 		<< "passwd          Change password for database\n"
+		<< "generate        Generate password\n"
 
 		<< '\n';
 	modStty(false,true);
@@ -281,8 +284,8 @@ void showItem(std::string item, std::string passwd, nihdb::dataBase* datb)
 	temp = dchain::strDecrypt(datb->ReturnVar(item, "passwd"), passwd);
 	std::cout << "Password: " << temp << '\n';
 	if (datb->ReturnVar("meta", "xclip") == "true") {
-		temp.insert(0, "printf \"");
-		temp += "\" | xclip -selection clipboard";
+		temp.insert(0, "/usr/bin/echo -n \'");
+		temp += "\' | xclip -selection clipboard";
 		system(temp.c_str());
 		std::cout << "Password copied to clipboard\n";
 	}
@@ -362,6 +365,29 @@ void modItem(std::string item, std::string password, nihdb::dataBase* datb)
 
 	datb->ApplyChanges();
 	std::cout << "Item changes saved...\n";
+	return;
+}
+
+void generate() {
+	modStty(true, false);
+	std::string temp;
+	std::cout << "\nEnter password length: ";
+	std::stringstream ss;
+	int length;
+	std::getline(std::cin, temp);
+	ss << temp;
+	ss >> length;
+	std::srand(std::clock());
+	temp.clear();
+	for (int i = 0; i < length; i++) {
+		temp += char((random() % 94) + 33);
+	}
+
+	std::cout << "Generated password: " << temp << '\n';
+	temp.insert(0, "/usr/bin/echo -n \'");
+	temp += "\' | xclip -selection clipboard";
+	system(temp.c_str());
+	std::cout << "Password copied to clipboard\n";
 	return;
 }
 
@@ -507,6 +533,11 @@ int startCLI(nihdb::dataBase* datb, std::string password)
 		if (command == "passwd") {
 			password = changePassword(datb, password, items);
 			std::cout << "\n\rPassword changed successfully\n\r";
+			continue;
+		}
+
+		if (command == "generate") {
+			generate();
 			continue;
 		}
 
