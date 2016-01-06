@@ -368,7 +368,8 @@ void modItem(std::string item, std::string password, nihdb::dataBase* datb)
 	return;
 }
 
-void generate() {
+void generate()
+{
 	modStty(true, false);
 	std::string temp;
 	std::cout << "\nEnter password length: ";
@@ -379,8 +380,13 @@ void generate() {
 	ss >> length;
 	std::srand(std::clock());
 	temp.clear();
+	char c;
 	for (int i = 0; i < length; i++) {
-		temp += char((random() % 94) + 33);
+		 c = char((random() % 94) + 33);
+		 if (c == '\'')
+			 i--;
+		 else
+			 temp += c;
 	}
 
 	std::cout << "Generated password: " << temp << '\n';
