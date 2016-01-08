@@ -328,10 +328,12 @@ std::vector<std::string> removeItem(std::string item, std::vector<std::string> i
 	}
 	std::string temp;
 	for (int i = 0; i < items.size(); i++)
-		temp += items[i];
+		temp += items[i] + " ";
 
 	if (temp.empty())
 		temp = "empty";
+	else
+		temp.pop_back();
 
 	datb->ChangeVarValue("meta", "items", temp);
 	datb->ApplyChanges();
