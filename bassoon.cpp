@@ -592,7 +592,6 @@ int main()
 		}
 		else{
 			modStty(true, false);
-			std::cout << "asd";
 			return 1;
 		}
 	}
