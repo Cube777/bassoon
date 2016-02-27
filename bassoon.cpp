@@ -437,9 +437,15 @@ int startCLI(nihdb::dataBase* datb, std::string password)
 	if (!temp.empty())
 		items.push_back(command);
 	bool bexit = false;
+	bool esc = false;
+	bool arrow = false;
+	std::vector<std::string> cmdHist;
+	int histpos = 0;
 
 	while (!bexit)
 	{
+		cmdHist.push_back(std::string());
+		histpos = cmdHist.size() - 1;
 		modStty(false, true);
 		command.clear();
 		char c = '\0';
@@ -447,10 +453,45 @@ int startCLI(nihdb::dataBase* datb, std::string password)
 
 		while (c != '\r')
 		{
+			cmdHist[histpos] = command;
 			c = std::cin.get();
 
-			if (c == 27)
+			if (c == 27) {
+				esc = true;
 				continue;
+			}
+
+			if (esc && !arrow) {
+				if (c == 91) {
+					arrow = true;
+					continue;
+				}
+				else {
+					esc = false;
+					arrow = false;
+				}
+			}
+
+			if (esc && arrow) {
+				if (c == 65) {
+					if (histpos > 0) {
+						histpos -= 1;
+						command = cmdHist[histpos];
+					}
+				}
+				if (c == 66) {
+					if (histpos < cmdHist.size() - 1) {
+						histpos += 1;
+						command = cmdHist[histpos];
+					}
+				}
+				esc = false;
+				arrow = false;
+				std::cout << "\33[2K\r> " << command;
+				continue;
+			}
+
+
 
 			if (c == '\r')
 				continue;
