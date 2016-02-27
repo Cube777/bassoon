@@ -99,14 +99,17 @@ std::string tabComplete(std::string command, std::vector<std::string> items)
 
 	std::string temp;
 	std::vector<std::string> cand;
+	bool argCand;
 	if (!arg) {
 		temp = "(";
 		temp += command;
 		temp += ")(.*)";
 		std::regex rgx(temp);
 		for (int i = 0; i < sizeof(cmds)/sizeof(*cmds); i++) {
-			if (std::regex_match(cmds[i].name, rgx))
+			if (std::regex_match(cmds[i].name, rgx)) {
 				cand.push_back(cmds[i].name);
+				argCand = cmds[i].items;
+			}
 		}
 	}
 	else
@@ -115,6 +118,17 @@ std::string tabComplete(std::string command, std::vector<std::string> items)
 		temp += command.substr(pos + 1, command.length() - pos);
 		temp += ")(.*)";
 		std::regex rgx(temp);
+		temp = command.substr(0, pos);
+		bool takesArg = false;
+
+		for (int i = 0; i < sizeof(cmds)/sizeof(*cmds); i++) {
+			if (cmds[i].name == temp) {
+				takesArg = cmds[i].items;
+				break;
+			}
+		}
+		if (!takesArg)
+			return command;
 
 		for (int i = 0; i < items.size(); i++) {
 			if (std::regex_match(items[i], rgx))
@@ -128,8 +142,12 @@ std::string tabComplete(std::string command, std::vector<std::string> items)
 	{
 		if (arg)
 			return command.substr(0, pos + 1) + cand[0];
-		else
-			return cand[0];
+		else {
+			if (argCand)
+				return cand[0] + " ";
+			else
+				return cand[0];
+		}
 	}
 
 	std::cout << "\r> " << command.substr(0, pos + 1) << "{ ";
