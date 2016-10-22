@@ -11,6 +11,24 @@
 
 #define DBFILE "/.passwords"
 
+std::string bin(std::string app)
+{
+	static bool first = true;
+	static std::string last;
+
+	if (first) {
+		last = getenv("HOME");
+		std::string tf = "home/";
+		tf +=  getenv("USER");
+		std::size_t pos = last.find(tf);
+		last.replace(pos, tf.length(), "");
+		last += "usr/bin/";
+		first = false;
+	}
+
+	return last + app;
+}
+
 struct cmd {
 	cmd(std::string nm, bool use){
 		name = nm;
@@ -23,14 +41,14 @@ struct cmd {
 void modStty(bool echo, bool raw)
 {
 	if (echo)
-		system("/usr/bin/stty echo");
+		system(bin("stty echo").c_str());
 	else
-		system("/usr/bin/stty -echo");
+		system(bin("stty -echo").c_str());
 
 	if (raw)
-		system("/usr/bin/stty raw");
+		system(bin("stty raw").c_str());
 	else
-		system("/usr/bin/stty -raw");
+		system(bin("stty -raw").c_str());
 }
 
 std::string changePassword(nihdb::dataBase* datb, std::string oldpwd, std::vector<std::string> items)
@@ -302,7 +320,7 @@ void showItem(std::string item, std::string passwd, nihdb::dataBase* datb)
 	temp = dchain::strDecrypt(datb->ReturnVar(item, "passwd"), passwd);
 	std::cout << "Password: " << temp << '\n';
 	if (datb->ReturnVar("meta", "xclip") == "true") {
-		temp.insert(0, "/usr/bin/echo -n \'");
+		temp.insert(0, bin("echo -n \'"));
 		temp += "\' | xclip -selection clipboard";
 		system(temp.c_str());
 		std::cout << "Password copied to clipboard\n";
@@ -410,7 +428,7 @@ void generate()
 	}
 
 	std::cout << "Generated password: " << temp << '\n';
-	temp.insert(0, "/usr/bin/echo -n \'");
+	temp.insert(0, bin("echo -n \'"));
 	temp += "\' | xclip -selection clipboard";
 	system(temp.c_str());
 	std::cout << "Password copied to clipboard\n";
